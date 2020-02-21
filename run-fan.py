@@ -5,15 +5,6 @@
 # run-fan turns a fan on and off when temperature exceeds temperature
 # thresholds.
 #
-# The fan comes with a MiuZei case, and can run on 3.3V (low speed) or
-# 5V (high speed). The fan can be plugged into either 3.3V or 5.5v GPIO
-# pin and to a ground GPIO pin, but that means the fan will always run
-# and that isn't very much fun. Any fan can be used as long it can operate 
-# at 3.3V
-#
-# run-fan was tested on a raspberry pi running kodi on osmc using a 3.3v
-# GPIO
-#
 #########################
 
 #########################
@@ -24,7 +15,7 @@
 #   S8050 pin c: connects to black (-) wire on fan
 #   S8050 pin b: connects to 110 Ohm Resistor and to GPIO pin 25
 #   S8050 pin e: connects to ground GPIO pin
-#   fan red (+): connects to 3.3v GPIO pin on raspberry pi 3
+#   fan red (+): connects to 5v GPIO pin on raspberry pi 3
 #
 # GPIO pin 25 is used, but it can be changed
 #
@@ -90,9 +81,12 @@ import RPi.GPIO as GPIO
 import datetime
 
 #########################
-sleepTime = 30	# Time to sleep between checking the temperature
-                # want to write unbuffered to file
-fileLog = open('/home/pi/run-fan.log', 'w+', 0)
+# sleep timer
+sleepTime = 30
+
+# want to write unbuffered to file
+logName = "/home/pi/logs/run-fan-default.log"
+fileLog = open(logName, 'w+', 0)
 
 #########################
 # Log messages should be time stamped
@@ -100,6 +94,11 @@ def timeStamp():
     t = time.time()
     s = datetime.datetime.fromtimestamp(t).strftime('%Y/%m/%d %H:%M:%S - ')
     return s
+
+def dateStamp():
+    t = time.time()
+    d = datetime.datetime.fromtimestamp(t).strftime('%Y.%m.%d')
+    return d
 
 # Write messages in a standard format
 def printMsg(s):
@@ -185,10 +184,18 @@ try:
     myFan = Fan()
     myTemp = Temperature()
     while True:
-        myTemp.checkTemperature(myFan, myPin)
-
+        # check if log file should be closed
+        tmp = "/home/pi/logs/run-fan-{}.log".format(dateStamp())
+        if tmp != logName:
+            # close old file and open a new file for today
+            fileLog.close()
+            logName = tmp
+            fileLog = open(logName, 'w+', 0)
+            # delete old logs
+            os.system("find /home/pi/logs -mtime +14 -delete")
         # Read the temperature every N sec (sleepTime)
         # Turning a device on & off can wear it out
+        myTemp.checkTemperature(myFan, myPin)
         time.sleep(sleepTime)
 
 except KeyboardInterrupt: # trap a CTRL+C keyboard interrupt
