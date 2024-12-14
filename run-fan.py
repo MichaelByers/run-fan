@@ -114,7 +114,8 @@ class Pin(object):
             GPIO.setwarnings(False)
             GPIO.setup(self.pin, GPIO.OUT)
             printMsg("Initialized: run-fan using GPIO pin: " + str(self.pin))
-            printMsg("Initialized: run-fan using GPIO pin: " + str(self.pin) + " : " + GPIO.gpio_function(self.pin))
+            func = GPIO.gpio_function(self.pin)
+            printMsg("GPIO pin: " + str(self.pin) + " set to " + str(func))
         except:
             printMsg("If method setup doesn't work, need to run script as sudo")
             exit
