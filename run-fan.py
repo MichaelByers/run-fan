@@ -85,8 +85,8 @@ import datetime
 sleepTime = 30
 
 # want to write unbuffered to file
-logName = "/home/pi/logs/run-fan-default.log"
-fileLog = open(logName, 'w+', 0)
+logName = "/home/pi/run-fan/logs/run-fan-default.log"
+fileLog = open(logName, 'w+', buffering=1)
 
 #########################
 # Log messages should be time stamped
@@ -111,9 +111,10 @@ class Pin(object):
     def __init__(self):
         try:
             GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.pin, GPIO.OUT)
             GPIO.setwarnings(False)
+            GPIO.setup(self.pin, GPIO.OUT)
             printMsg("Initialized: run-fan using GPIO pin: " + str(self.pin))
+            printMsg("Initialized: run-fan using GPIO pin: " + str(self.pin) + " : " + GPIO.gpio_function(self.pin))
         except:
             printMsg("If method setup doesn't work, need to run script as sudo")
             exit
@@ -162,8 +163,10 @@ class Temperature(object):
 
     def getTemperature(self):
         # need to specify path for vcgencmd
-        res = os.popen('/opt/vc/bin/vcgencmd measure_temp').readline()
-        self.cpuTemperature = float((res.replace("temp=","").replace("'C\n","")))
+        # res = os.popen('/opt/vc/bin/vcgencmd measure_temp').readline()
+        # self.cpuTemperature = float((res.replace("temp=","").replace("'C\n","")))
+        res = os.popen('cat /sys/class/thermal/thermal_zone0/temp').readline()
+        self.cpuTemperature = float(res)/1000
 
     # Using the CPU's temperature, turn the fan on or off
     def checkTemperature(self, myFan, myPin):
@@ -184,18 +187,17 @@ try:
     myFan = Fan()
     myTemp = Temperature()
     while True:
+        myTemp.checkTemperature(myFan, myPin)
         # check if log file should be closed
-        tmp = "/home/pi/logs/run-fan-{}.log".format(dateStamp())
+        tmp = "/home/pi/run-fan/logs/run-fan-{}.log".format(dateStamp())
         if tmp != logName:
-            # close old file and open a new file for today
             fileLog.close()
             logName = tmp
-            fileLog = open(logName, 'w+', 0)
+            fileLog = open(logName, 'w+', buffering=1)
             # delete old logs
-            os.system("find /home/pi/logs -mtime +14 -delete")
+            os.system("find /home/pi/run-fan/logs/ -mtime +14 -delete")
         # Read the temperature every N sec (sleepTime)
         # Turning a device on & off can wear it out
-        myTemp.checkTemperature(myFan, myPin)
         time.sleep(sleepTime)
 
 except KeyboardInterrupt: # trap a CTRL+C keyboard interrupt
